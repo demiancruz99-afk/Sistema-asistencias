@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Sistema de Control de Asistencias</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+
+  <div class="max-w-2xl mx-auto">
+    <div class="bg-white rounded-lg shadow-lg p-5 mb-5">
+      <h1 class="text-2xl font-bold text-indigo-700 text-center">Control de Asistencias</h1>
+    </div>
+
+    <!-- Tabs -->
+    <div class="flex bg-white rounded-lg shadow mb-5 overflow-hidden">
+      <button onclick="showTab('lista')" id="tab-lista" class="flex-1 py-3 font-semibold text-indigo-700 border-b-4 border-indigo-600">Lista</button>
+      <button onclick="showTab('resumen')" id="tab-resumen" class="flex-1 py-3 font-semibold text-gray-500">Resumen</button>
+      <button onclick="showTab('reportes')" id="tab-reportes" class="flex-1 py-3 font-semibold text-gray-500">Reportes</button>
+    </div>
+
+    <!-- TAB LISTA -->
+    <div id="tab-lista-content">
+      <div class="bg-white rounded-lg shadow p-4 mb-4">
+        <div class="flex gap-2">
+          <input id="nombreInput" type="text" placeholder="Nombre completo"
+            class="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            onkeydown="if(event.key==='Enter') agregarPersona()" />
+          <button onclick="agregarPersona()"
+            class="bg-indigo-600 text-white px-5 py-2 rounded-lg font-semibold hover:bg-indigo-700">
+            Agregar
+          </button>
+        </div>
+      </div>
+      <div id="lista" class="space-y-3"></div>
+      <p id="lista-vacia" class="text-center text-gray-400 mt-10">No hay personas en la lista</p>
+    </div>
+
+    <!-- TAB RESUMEN -->
+    <div id="tab-resumen-content" class="hidden space-y-4">
+      <div class="bg-indigo-50 rounded-lg p-5 text-center">
+        <p class="text-gray-500 text-sm">Total de Personas</p>
+        <p id="total" class="text-5xl font-bold text-indigo-600">0</p>
+      </div>
+      <div class="bg-white rounded-lg shadow p-4 border-l-4 border-green-500">
+        <div class="flex justify-between items-center mb-2">
+          <span class="font-bold text-green-700">Presentes</span>
+          <span id="cnt-present" class="bg-green-600 text-white px-3 py-1 rounded-full text-sm font-bold">0</span>
+        </div>
+        <ul id="list-present" class="text-sm text-gray-600 space-y-1"></ul>
+      </div>
+      <div class="bg-white rounded-lg shadow p-4 border-l-4 border-yellow-500">
+        <div class="flex justify-between items-center mb-2">
+          <span class="font-bold text-yellow-700">Tarde</span>
+          <span id="cnt-late" class="bg-yellow-500 text-white px-3 py-1 rounded-full text-sm font-bold">0</span>
+        </div>
+        <ul id="list-late" class="text-sm text-gray-600 space-y-1"></ul>
+      </div>
+      <div class="bg-white rounded-lg shadow p-4 border-l-4 border-red-500">
+        <div class="flex justify-between items-center mb-2">
+          <span class="font-bold text-red-700">Ausentes</span>
+          <span id="cnt-absent" class="bg-red-600 text-white px-3 py-1 rounded-full text-sm font-bold">0</span>
+        </div>
+        <ul id="list-absent" class="text-sm text-gray-600 space-y-1"></ul>
+      </div>
+    </div>
+
+    <!-- TAB REPORTES -->
+    <div id="tab-reportes-content" class="hidden space-y-3">
+      <p id="reportes-vacio" class="text-center text-gray-400 mt-10">No hay reportes de ausencia</p>
+      <div id="reportes" class="space-y-3"></div>
+    </div>
+  </div>
+
+  <script>
+    let people = [];
+    let reports = [];
+
+    function agregarPersona() {
+      const input = document.getElementById('nombreInput');
+      const name = input.value.trim();
+      if (!name) return;
+      people.push({ id: Date.now(), name, status: null });
+      input.value = '';
+      renderLista();
+    }
+
+    function setStatus(id, status) {
+      const person = people.find(p => p.id === id);
+      if (!person) return;
+      if (status === 'absent' && person.status !== 'absent') {
+        reports.push({ id: Date.now(), name: person.name, time: new Date() });
+        renderReportes();
+      }
+      person.status = status;
+      renderLista();
+      renderResumen();
+    }
+
+    function eliminar(id) {
+      if (confirm('¿Eliminar esta persona?')) {
+        people = people.filter(p => p.id !== id);
+        renderLista();
+        renderResumen();
+      }
+    }
+
+    function renderLista() {
+      const lista = document.getElementById('lista');
+      const vacia = document.getElementById('lista-vacia');
+      lista.innerHTML = '';
+      vacia.style.display = people.length === 0 ? 'block' : 'none';
+      people.forEach(p => {
+        const statusLabel = p.status === 'present' ? '<span class="text-green-600 text-xs font-semibold">Presente</span>' :
+                            p.status === 'late' ? '<span class="text-yellow-600 text-xs font-semibold">Tarde</span>' :
+                            p.status === 'absent' ? '<span class="text-red-600 text-xs font-semibold">Ausente</span>' : '';
+        lista.innerHTML += `
+          <div class="bg-white rounded-lg shadow p-4 flex items-center justify-between gap-2">
+            <div>
+              <p class="font-semibold text-gray-800">${p.name}</p>
+              ${statusLabel}
+            </div>
+            <div class="flex gap-2">
+              <button onclick="setStatus(${p.id},'present')"
+                class="w-10 h-10 rounded-lg text-lg ${p.status==='present' ? 'bg-green-600 text-white' : 'bg-green-100 text-green-700'}">✓</button>
+              <button onclick="setStatus(${p.id},'late')"
+                class="w-10 h-10 rounded-lg text-lg ${p.status==='late' ? 'bg-yellow-500 text-white' : 'bg-yellow-100 text-yellow-700'}">⏱</button>
+              <button onclick="setStatus(${p.id},'absent')"
+                class="w-10 h-10 rounded-lg text-lg ${p.status==='absent' ? 'bg-red-600 text-white' : 'bg-red-100 text-red-700'}">✗</button>
+              <button onclick="eliminar(${p.id})"
+                class="w-10 h-10 rounded-lg bg-gray-200 text-gray-600 text-lg">🗑</button>
+            </div>
+          </div>`;
+      });
+      renderResumen();
+    }
+
+    function renderResumen() {
+      document.getElementById('total').textContent = people.length;
+      ['present','late','absent'].forEach(s => {
+        const filtered = people.filter(p => p.status === s);
+        document.getElementById('cnt-' + s).textContent = filtered.length;
+        document.getElementById('list-' + s).innerHTML = filtered.map(p => `<li>• ${p.name}</li>`).join('');
+      });
+    }
+
+    function renderReportes() {
+      const cont = document.getElementById('reportes');
+      const vacio = document.getElementById('reportes-vacio');
+      vacio.style.display = reports.length === 0 ? 'block' : 'none';
+      cont.innerHTML = reports.map(r => `
+        <div class="bg-white rounded-lg shadow p-4 border-l-4 border-red-500">
+          <p class="font-bold text-red-700 mb-2">Reporte de Inasistencia</p>
+          <p class="text-sm text-gray-700"><strong>Persona:</strong> ${r.name}</p>
+          <p class="text-sm text-gray-700"><strong>Fecha:</strong> ${r.time.toLocaleDateString('es-ES')}</p>
+          <p class="text-sm text-gray-700"><strong>Hora:</strong> ${r.time.toLocaleTimeString('es-ES')}</p>
+          <p class="text-xs text-gray-500 italic mt-2">Reporte generado por inasistencia en el horario establecido.</p>
+        </div>`).join('');
+    }
+
+    function showTab(tab) {
+      ['lista','resumen','reportes'].forEach(t => {
+        document.getElementById('tab-'+t+'-content').classList.toggle('hidden', t !== tab);
+        const btn = document.getElementById('tab-'+t);
+        btn.className = t === tab
+          ? 'flex-1 py-3 font-semibold text-indigo-700 border-b-4 border-indigo-600'
+          : 'flex-1 py-3 font-semibold text-gray-500';
+      });
+    }
+  </script>
+</body>
+</html>
